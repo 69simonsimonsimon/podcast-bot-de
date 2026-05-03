@@ -41,66 +41,91 @@ def _get_cookies_file() -> str | None:
 
 
 def download_segment(video_url: str, start: float, end: float,
-                     output_path: Path,
-                     quality: str = "bestvideo[height<=1080]+bestaudio/best[height<=1080]") -> Path:
+                     output_path: Path) -> Path:
     """
     Lädt nur das angegebene Segment herunter.
-    Nutzt yt-dlp --download-sections für effizienten partiellen Download.
-    Verwendet android player_client um Bot-Detection zu umgehen.
-    Cookies aus YOUTUBE_COOKIES Env-Variable als Fallback.
+    Versucht mehrere Player-Clients um GitHub Actions Bot-Detection zu umgehen.
     """
     start_str = _sec_to_hhmmss(start)
     end_str   = _sec_to_hhmmss(end)
 
     logger.info(f"[renderer] Download Segment {start_str}–{end_str}...")
 
-    # Temp-Datei für yt-dlp Output
-    tmp = output_path.with_suffix(".tmp.%(ext)s")
-
     cookies_file = _get_cookies_file()
-    cmd = [
-        "yt-dlp",
-        "--download-sections", f"*{start_str}-{end_str}",
-        "--force-keyframes-at-cuts",
-        "-f", quality,
-        "--merge-output-format", "mp4",
-        "--extractor-args", "youtube:player_client=android,web",
-        "-o", str(tmp),
-        "--no-playlist",
-        "--quiet",
-        "--no-warnings",
-    ]
     if cookies_file:
-        cmd += ["--cookies", cookies_file]
-        logger.info(f"[renderer] Verwende Cookies ({Path(cookies_file).stat().st_size} Bytes)")
-    cmd.append(video_url)
+        logger.info(f"[renderer] Cookies geladen ({Path(cookies_file).stat().st_size} Bytes)")
 
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    # Verschiedene Strategien — erste funktionierende wird genommen
+    strategies = [
+        # 1. iOS-Client (oft am besten für nicht-öffentliche IPs)
+        {"player_client": "ios", "format": "bestvideo[height<=1080]+bestaudio/best[height<=1080]"},
+        # 2. TV-Embedded (umgeht viele Bot-Checks)
+        {"player_client": "tv_embedded", "format": "bestvideo[height<=720]+bestaudio/best[height<=720]"},
+        # 3. Android-Client
+        {"player_client": "android", "format": "bestvideo[height<=720]+bestaudio/best[height<=720]"},
+        # 4. Fallback: web mit einfachstem Format
+        {"player_client": "web", "format": "best[ext=mp4]/best"},
+    ]
 
-    # Cookies-Datei aufräumen
+    tmp = output_path.with_suffix(".tmp.%(ext)s")
+    last_error = "Unbekannter Fehler"
+
+    for i, strategy in enumerate(strategies):
+        # Alte temp-Dateien löschen
+        for f in output_path.parent.glob("*.tmp.*"):
+            f.unlink(missing_ok=True)
+
+        cmd = [
+            "yt-dlp",
+            "--download-sections", f"*{start_str}-{end_str}",
+            "--force-keyframes-at-cuts",
+            "-f", strategy["format"],
+            "--merge-output-format", "mp4",
+            "--extractor-args", f"youtube:player_client={strategy['player_client']}",
+            "-o", str(tmp),
+            "--no-playlist",
+            "--quiet",
+            "--no-warnings",
+        ]
+        if cookies_file:
+            cmd += ["--cookies", cookies_file]
+        cmd.append(video_url)
+
+        logger.info(f"[renderer] Versuch {i+1}/4: player_client={strategy['player_client']}")
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+
+        # Output-Datei finden
+        parent = output_path.parent
+        found = False
+        for f in parent.glob("*.tmp.mp4"):
+            f.rename(output_path)
+            found = True
+            break
+        if not found and not output_path.exists():
+            for f in parent.glob("*.mp4"):
+                if f != output_path:
+                    f.rename(output_path)
+                    found = True
+                    break
+
+        if output_path.exists() and output_path.stat().st_size > 10_000:
+            mb = output_path.stat().st_size / 1024 / 1024
+            logger.info(f"[renderer] ✅ Segment geladen mit {strategy['player_client']}: {mb:.1f} MB")
+            break
+
+        last_error = result.stderr[:300] if result.stderr else "Unbekannt"
+        logger.warning(f"[renderer] Versuch {i+1} fehlgeschlagen: {last_error[:100]}")
+
+    # Cookies aufräumen
     if cookies_file:
         try:
             Path(cookies_file).unlink(missing_ok=True)
         except Exception:
             pass
 
-    # yt-dlp benennt Output automatisch — finden wir die Datei
-    parent = output_path.parent
-    for f in parent.glob("*.tmp.mp4"):
-        f.rename(output_path)
-        break
-    # Fallback: suche nach irgendwas was yt-dlp erzeugt hat
-    if not output_path.exists():
-        for f in parent.glob("*.mp4"):
-            if f != output_path:
-                f.rename(output_path)
-                break
+    if not output_path.exists() or output_path.stat().st_size < 10_000:
+        raise RuntimeError(f"yt-dlp Download fehlgeschlagen (alle {len(strategies)} Strategien):\n{last_error}")
 
-    if not output_path.exists():
-        raise RuntimeError(f"yt-dlp Download fehlgeschlagen:\n{result.stderr[:500]}")
-
-    mb = output_path.stat().st_size / 1024 / 1024
-    logger.info(f"[renderer] Segment geladen: {output_path.name} ({mb:.1f} MB)")
     return output_path
 
 
