@@ -41,11 +41,11 @@ def get_latest_video(channel_url: str, skip_ids: set = None) -> dict | None:
 
     raw = _run_ytdlp([
         "--flat-playlist",
-        "--playlist-end", "5",
+        "--playlist-end", "10",
         "--print", '%(id)s\t%(title)s\t%(duration)s',
         "--no-warnings",
         channel_url,
-    ], timeout=30)
+    ], timeout=45)
 
     if not raw:
         logger.warning("[analyzer] Keine Videos gefunden")
@@ -60,11 +60,17 @@ def get_latest_video(channel_url: str, skip_ids: set = None) -> dict | None:
 
         if vid_id in skip_ids:
             continue
-        if duration < 600:   # unter 10 Min → kein Podcast
+        # Nur überspringen wenn Dauer bekannt UND unter 10 Minuten
+        if duration > 0 and duration < 600:
             continue
 
         video_url = f"https://www.youtube.com/watch?v={vid_id}"
-        chapters = _get_chapters(video_url)
+        duration, chapters = _get_meta(video_url)
+
+        # Nochmals prüfen mit echten Metadaten
+        if duration > 0 and duration < 600:
+            logger.debug(f"[analyzer] Skip (zu kurz {duration}s): {title[:50]}")
+            continue
 
         logger.info(f"[analyzer] Video: {title[:60]}  ({duration//60} min, {len(chapters)} Kapitel)")
         return {
@@ -78,30 +84,37 @@ def get_latest_video(channel_url: str, skip_ids: set = None) -> dict | None:
     return None
 
 
-def _get_chapters(video_url: str) -> list[dict]:
-    """Liest Kapitel eines Videos aus (ohne Download)."""
+def _get_meta(video_url: str) -> tuple[int, list[dict]]:
+    """Holt Dauer + Kapitel eines Videos (ohne Download). Gibt (duration_sec, chapters) zurück."""
     raw = _run_ytdlp([
-        "--print", "%(chapters)j",
+        "--print", "%(duration)s\t%(chapters)j",
         "--no-warnings",
         "--skip-download",
         video_url,
     ], timeout=20)
 
+    duration = 0
+    chapters = []
     try:
-        chapters = json.loads(raw)
-        if isinstance(chapters, list) and chapters:
-            return [
-                {
-                    "title":      c.get("title", ""),
-                    "start_time": float(c.get("start_time", 0)),
-                    "end_time":   float(c.get("end_time", 0)),
-                }
-                for c in chapters
-                if c.get("end_time", 0) - c.get("start_time", 0) >= 60   # min. 1 Min
-            ]
+        first_line = raw.splitlines()[0] if raw else ""
+        parts = first_line.split("\t", 1)
+        if parts[0].isdigit():
+            duration = int(parts[0])
+        if len(parts) > 1:
+            raw_chapters = json.loads(parts[1])
+            if isinstance(raw_chapters, list) and raw_chapters:
+                chapters = [
+                    {
+                        "title":      c.get("title", ""),
+                        "start_time": float(c.get("start_time", 0)),
+                        "end_time":   float(c.get("end_time", 0)),
+                    }
+                    for c in raw_chapters
+                    if c.get("end_time", 0) - c.get("start_time", 0) >= 60
+                ]
     except Exception:
         pass
-    return []
+    return duration, chapters
 
 
 def pick_best_segment(video: dict) -> dict:
@@ -186,9 +199,10 @@ Antworte NUR mit JSON:
 
 def _pick_middle_segment(video: dict) -> dict:
     """Fallback ohne Kapitel: zufälliges 88s-Fenster aus dem mittleren Drittel."""
-    duration = video["duration"]
+    duration = video["duration"] or 3600   # Fallback 1h wenn unbekannt
     third    = duration // 3
-    start    = random.randint(third, 2 * third - HIGHLIGHT_MAX_SEC)
+    window   = max(HIGHLIGHT_MAX_SEC + 1, 2 * third - third)
+    start    = random.randint(third, third + window - HIGHLIGHT_MAX_SEC)
     end      = start + HIGHLIGHT_MAX_SEC
     logger.info(f"[analyzer] Kein Kapitel — Segment {_fmt_time(start)}–{_fmt_time(end)}")
     return {
