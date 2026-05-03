@@ -13,26 +13,17 @@ on:
 
 jobs:
   generate:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted   # Mac-Runner mit Wohnungs-IP → kein YouTube Bot-Block
     timeout-minutes: 60
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install system dependencies
+      - name: Install/upgrade dependencies
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y ffmpeg
-          pip install yt-dlp --upgrade
-
-      - name: Install Python dependencies
-        run: pip install -r requirements.txt
+          pip3 install yt-dlp --upgrade --quiet
+          pip3 install -r requirements.txt --quiet
 
       - name: Generate podcast highlights
         env:
@@ -44,5 +35,4 @@ jobs:
           BUNNY_STORAGE_HOSTNAME: ${{ secrets.BUNNY_STORAGE_HOSTNAME }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES }}
         run: python3 run_local.py "${{ github.event.inputs.channel || '' }}" 2 1
