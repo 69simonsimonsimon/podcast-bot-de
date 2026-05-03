@@ -128,9 +128,10 @@ def generate_highlight(channel_keyword: str = None) -> bool:
         )
 
         # 7. Metadaten + Upload
-        caption = _build_caption(video, segment, channel)
+        yt_title = _generate_viral_title(video, segment, channel)
+        caption  = _build_caption(video, segment, channel, yt_title)
         meta = {
-            "title":        f"{channel['name']}: {segment['chapter_title'] or video['title'][:50]}",
+            "title":        yt_title,
             "caption":      caption,
             "sport":        "podcast",
             "player":       channel["name"],
@@ -156,6 +157,48 @@ def generate_highlight(channel_keyword: str = None) -> bool:
         output_path.unlink(missing_ok=True)
 
 
+def _generate_viral_title(video: dict, segment: dict, channel: dict) -> str:
+    """Generiert einen viral-optimierten YouTube/TikTok Titel mit Claude."""
+    import anthropic
+    chapter = segment.get("chapter_title", "")
+    podcast_title = video.get("title", "")
+    channel_name  = channel["name"]
+    niche         = channel.get("niche", "")
+
+    prompt = f"""Du bist ein Social-Media-Experte für TikTok und YouTube Shorts in Deutschland.
+
+Podcast-Kanal: {channel_name}
+Podcast-Folge: {podcast_title}
+Thema des Clips: {chapter or podcast_title}
+Nische: {niche}
+
+Erstelle einen **kurzen, viralen Titel** (max. 60 Zeichen) für diesen Podcast-Clip auf TikTok/YouTube Shorts.
+
+Regeln:
+- Kein "Podcast" oder Kanalname im Titel
+- Neugier wecken, Frage oder starke Aussage
+- Umgangssprache OK, gerne Großbuchstaben für Betonung
+- 1 passendes Emoji am Ende
+- KEIN Clickbait — der Clip muss halten was der Titel verspricht
+- Maximal 60 Zeichen
+
+Antworte NUR mit dem Titel, ohne Anführungszeichen."""
+
+    try:
+        client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+        msg = client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=80,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        title = msg.content[0].text.strip().strip('"').strip("'")
+        logger.info(f"    Titel: {title}")
+        return title[:100]
+    except Exception as e:
+        logger.warning(f"    Titel-Generierung fehlgeschlagen: {e} — Fallback")
+        return chapter or podcast_title[:60] or channel_name
+
+
 def _load_used_videos() -> set:
     used_file = OUTPUT_DIR / "used_videos.json"
     try:
@@ -164,31 +207,32 @@ def _load_used_videos() -> set:
         return set()
 
 
-def _build_caption(video: dict, segment: dict, channel: dict) -> str:
-    chapter = segment.get("chapter_title", "")
-    name    = channel["name"]
-    niche   = channel.get("niche", "")
+def _build_caption(video: dict, segment: dict, channel: dict, viral_title: str = "") -> str:
+    name  = channel["name"]
+    niche = channel.get("niche", "")
 
     niche_tags = {
-        "business":     "#business #unternehmertum #entrepreneur #erfolg",
-        "finance":      "#finanzen #investieren #geld #reich",
-        "entertainment":"#podcast #unterhaltung #comedy #lustig",
-        "talk":         "#interview #talk #podcast #persönlichkeit",
-        "tech":         "#tech #ki #zukunft #technologie",
-        "politics":     "#politik #gesellschaft #news #diskussion",
-        "true_crime":   "#truecrime #verbrechen #krimi #mystery",
-        "health":       "#gesundheit #fitness #lifestyle #wohlbefinden",
-        "culture":      "#kultur #philosophie #leben #gedanken",
+        "business":      "#business #unternehmertum #entrepreneur #erfolg",
+        "finance":       "#finanzen #investieren #geld #reich",
+        "entertainment": "#podcast #unterhaltung #comedy #lustig",
+        "talk":          "#interview #talk #podcast #persönlichkeit",
+        "tech":          "#tech #ki #zukunft #technologie",
+        "politics":      "#politik #gesellschaft #news #diskussion",
+        "true_crime":    "#truecrime #verbrechen #krimi #mystery",
+        "health":        "#gesundheit #fitness #lifestyle #wohlbefinden",
+        "culture":       "#kultur #philosophie #leben #gedanken",
+        "science":       "#wissenschaft #bildung #lernen #interessant",
     }
     tags = niche_tags.get(niche, "#podcast #deutsch #viral")
 
     lines = [
-        f"🎙 {name}" + (f": {chapter}" if chapter else ""),
+        viral_title or name,
         "",
+        f"🎙 aus dem {name} Podcast",
         f"➡️ Ganzen Podcast ansehen — Link in Bio",
         "",
         tags,
-        "#podcast #deutscherpodcast #fyp #fypシ #viral2025",
+        "#podcast #deutscherpodcast #fyp #fypシ #viral",
     ]
     return "\n".join(lines)
 
