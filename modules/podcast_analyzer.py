@@ -77,6 +77,14 @@ def get_latest_video(channel_url: str, skip_ids: set = None) -> dict | None:
         # Nur überspringen wenn Dauer bekannt UND unter 10 Minuten
         if duration > 0 and duration < 600:
             continue
+        # Werbevideos / Sponsored Content überspringen
+        title_lower = title.lower()
+        if any(kw in title_lower for kw in [
+            "werbung", "sponsored", "anzeige", "partner", "ad ", "#ad",
+            "werbespot", "commercial", "promotion", "präsentiert von",
+        ]):
+            logger.info(f"[analyzer] Skip (Werbung): {title[:60]}")
+            continue
 
         video_url = f"https://www.youtube.com/watch?v={vid_id}"
         duration, chapters = _get_meta(video_url)
