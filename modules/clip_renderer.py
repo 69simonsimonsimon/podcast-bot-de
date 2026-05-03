@@ -41,11 +41,13 @@ def _get_cookies_file() -> str | None:
 
 
 def download_segment(video_url: str, start: float, end: float,
-                     output_path: Path, quality: str = "bestvideo[height<=1080]+bestaudio/best[height<=1080]") -> Path:
+                     output_path: Path,
+                     quality: str = "bestvideo[height<=1080]+bestaudio/best[height<=1080]") -> Path:
     """
     Lädt nur das angegebene Segment herunter.
     Nutzt yt-dlp --download-sections für effizienten partiellen Download.
-    Verwendet YOUTUBE_COOKIES Env-Variable falls vorhanden (gegen Bot-Detection).
+    Verwendet android player_client um Bot-Detection zu umgehen.
+    Cookies aus YOUTUBE_COOKIES Env-Variable als Fallback.
     """
     start_str = _sec_to_hhmmss(start)
     end_str   = _sec_to_hhmmss(end)
@@ -62,6 +64,7 @@ def download_segment(video_url: str, start: float, end: float,
         "--force-keyframes-at-cuts",
         "-f", quality,
         "--merge-output-format", "mp4",
+        "--extractor-args", "youtube:player_client=android,web",
         "-o", str(tmp),
         "--no-playlist",
         "--quiet",
@@ -69,6 +72,7 @@ def download_segment(video_url: str, start: float, end: float,
     ]
     if cookies_file:
         cmd += ["--cookies", cookies_file]
+        logger.info(f"[renderer] Verwende Cookies ({Path(cookies_file).stat().st_size} Bytes)")
     cmd.append(video_url)
 
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)

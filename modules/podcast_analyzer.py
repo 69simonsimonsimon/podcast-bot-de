@@ -58,6 +58,7 @@ def get_latest_video(channel_url: str, skip_ids: set = None) -> dict | None:
         "--playlist-end", "10",
         "--print", '%(id)s\t%(title)s\t%(duration)s',
         "--no-warnings",
+        "--extractor-args", "youtube:player_client=android,web",
     ] + _cookies_args() + [channel_url], timeout=45)
 
     if not raw:
@@ -103,6 +104,7 @@ def _get_meta(video_url: str) -> tuple[int, list[dict]]:
         "--print", "%(duration)s\t%(chapters)j",
         "--no-warnings",
         "--skip-download",
+        "--extractor-args", "youtube:player_client=android,web",
     ] + _cookies_args() + [video_url], timeout=20)
 
     duration = 0
