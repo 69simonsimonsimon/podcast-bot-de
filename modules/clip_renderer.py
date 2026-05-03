@@ -28,11 +28,24 @@ COLOR_OUTLINE  = "&H00000000"   # Schwarz
 FONT_SIZE      = 68
 
 
+def _get_cookies_file() -> str | None:
+    """Schreibt YouTube-Cookies aus Env-Variable in Temp-Datei. Gibt Pfad zurück oder None."""
+    cookies = os.environ.get("YOUTUBE_COOKIES", "").strip()
+    if not cookies:
+        return None
+    tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, prefix="yt_cookies_")
+    tmp.write(cookies)
+    tmp.flush()
+    tmp.close()
+    return tmp.name
+
+
 def download_segment(video_url: str, start: float, end: float,
                      output_path: Path, quality: str = "bestvideo[height<=1080]+bestaudio/best[height<=1080]") -> Path:
     """
     Lädt nur das angegebene Segment herunter.
     Nutzt yt-dlp --download-sections für effizienten partiellen Download.
+    Verwendet YOUTUBE_COOKIES Env-Variable falls vorhanden (gegen Bot-Detection).
     """
     start_str = _sec_to_hhmmss(start)
     end_str   = _sec_to_hhmmss(end)
@@ -42,7 +55,8 @@ def download_segment(video_url: str, start: float, end: float,
     # Temp-Datei für yt-dlp Output
     tmp = output_path.with_suffix(".tmp.%(ext)s")
 
-    result = subprocess.run([
+    cookies_file = _get_cookies_file()
+    cmd = [
         "yt-dlp",
         "--download-sections", f"*{start_str}-{end_str}",
         "--force-keyframes-at-cuts",
@@ -52,8 +66,19 @@ def download_segment(video_url: str, start: float, end: float,
         "--no-playlist",
         "--quiet",
         "--no-warnings",
-        video_url,
-    ], capture_output=True, text=True, timeout=300)
+    ]
+    if cookies_file:
+        cmd += ["--cookies", cookies_file]
+    cmd.append(video_url)
+
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+
+    # Cookies-Datei aufräumen
+    if cookies_file:
+        try:
+            Path(cookies_file).unlink(missing_ok=True)
+        except Exception:
+            pass
 
     # yt-dlp benennt Output automatisch — finden wir die Datei
     parent = output_path.parent

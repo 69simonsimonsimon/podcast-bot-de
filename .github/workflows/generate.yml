@@ -44,4 +44,5 @@ jobs:
           BUNNY_STORAGE_HOSTNAME: ${{ secrets.BUNNY_STORAGE_HOSTNAME }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES }}
         run: python3 run_local.py "${{ github.event.inputs.channel || '' }}" 2 1

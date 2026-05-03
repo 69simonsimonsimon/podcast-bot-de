@@ -11,12 +11,26 @@ import json
 import logging
 import os
 import subprocess
+import tempfile
 import random
 from datetime import timedelta
+from pathlib import Path
 
 import anthropic
 
 logger = logging.getLogger("podcastbot")
+
+
+def _cookies_args() -> list:
+    """Gibt yt-dlp Cookie-Argumente zurück falls YOUTUBE_COOKIES gesetzt."""
+    cookies = os.environ.get("YOUTUBE_COOKIES", "").strip()
+    if not cookies:
+        return []
+    tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, prefix="yt_cookies_")
+    tmp.write(cookies)
+    tmp.flush()
+    tmp.close()
+    return ["--cookies", tmp.name]
 
 # Mindest- und Maximal-Länge eines Highlights in Sekunden
 HIGHLIGHT_MIN_SEC = 55
@@ -44,8 +58,7 @@ def get_latest_video(channel_url: str, skip_ids: set = None) -> dict | None:
         "--playlist-end", "10",
         "--print", '%(id)s\t%(title)s\t%(duration)s',
         "--no-warnings",
-        channel_url,
-    ], timeout=45)
+    ] + _cookies_args() + [channel_url], timeout=45)
 
     if not raw:
         logger.warning("[analyzer] Keine Videos gefunden")
@@ -90,8 +103,7 @@ def _get_meta(video_url: str) -> tuple[int, list[dict]]:
         "--print", "%(duration)s\t%(chapters)j",
         "--no-warnings",
         "--skip-download",
-        video_url,
-    ], timeout=20)
+    ] + _cookies_args() + [video_url], timeout=20)
 
     duration = 0
     chapters = []
