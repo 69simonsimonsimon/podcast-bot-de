@@ -166,7 +166,7 @@ def transcribe_segment(video_path: Path) -> list[dict]:
 
 def render_clip(segment_path: Path, words: list[dict],
                 channel_name: str, chapter_title: str,
-                output_path: Path) -> Path:
+                output_path: Path, hook: str = "") -> Path:
     """
     Rendert das finale 9:16-Video:
     - Blur-Hintergrund (gestrecktes Original)
@@ -177,7 +177,7 @@ def render_clip(segment_path: Path, words: list[dict],
     logger.info("[renderer] Render 9:16 Video mit Karaoke...")
 
     ass_path = segment_path.with_suffix(".ass")
-    _write_ass(words, ass_path, channel_name, chapter_title)
+    _write_ass(words, ass_path, channel_name, chapter_title, hook)
 
     try:
         filter_graph = (
@@ -218,7 +218,7 @@ def render_clip(segment_path: Path, words: list[dict],
 
 # ── ASS-Subtitle Generator ────────────────────────────────────────────────────
 
-def _write_ass(words: list[dict], path: Path, channel_name: str, chapter_title: str):
+def _write_ass(words: list[dict], path: Path, channel_name: str, chapter_title: str, hook: str = ""):
     """Erstellt eine ASS-Subtitle-Datei mit Wort-für-Wort Highlighting."""
 
     # Gruppiere Wörter in Zeilen (max. 4 Wörter pro Zeile)
@@ -252,10 +252,24 @@ def _write_ass(words: list[dict], path: Path, channel_name: str, chapter_title: 
                 f"Dialogue: 0,{_ass_time(clip_start)},{_ass_time(min(clip_start+4, clip_end))},"
                 f"Chapter,,0,0,0,,{_escape_ass(chapter_short)}"
             )
-        # CTA unten
+        # Hook-Text in der Mitte (erste 3 Sekunden, groß und auffällig)
+        if hook:
+            events.insert(2,
+                f"Dialogue: 0,{_ass_time(clip_start)},{_ass_time(min(clip_start+3, clip_end))},"
+                f"Hook,,0,0,0,,{_escape_ass(hook)}"
+            )
+        # CTA unten — Stitch + Kommentar-Bait
+        _cta_options = [
+            "💬 Kommentiert eure Meinung 👇",
+            "🎭 Stitch mit deiner Reaktion!",
+            "💬 Stimmt ihr dem zu? Kommentiert!",
+            "👇 Ganzen Podcast in Bio",
+        ]
+        import random as _r
+        _cta_text = _r.choice(_cta_options)
         events.append(
             f"Dialogue: 0,{_ass_time(max(clip_end-3, clip_start))},{_ass_time(clip_end)},"
-            f"CTA,,0,0,0,,{{\\an2}}Ganzen Podcast in Bio 👇"
+            f"CTA,,0,0,0,,{{\\an2}}{_escape_ass(_cta_text)}"
         )
 
     header = f"""[Script Info]
@@ -270,6 +284,7 @@ Style: Karaoke,{FONT},{FONT_SIZE},{COLOR_DEFAULT},&H00FFFF00,{COLOR_OUTLINE},&H8
 Style: Label,{FONT},42,&H00FFFFFF,&H00FFFFFF,{COLOR_OUTLINE},&H90000000,-1,0,0,0,100,100,2,0,1,2,1,8,40,40,60,1
 Style: Chapter,{FONT},36,&H00E0E0E0,&H00E0E0E0,{COLOR_OUTLINE},&H90000000,0,0,0,0,100,100,1,0,1,2,0,8,40,40,110,1
 Style: CTA,{FONT},44,&H00FFFF00,&H00FFFF00,{COLOR_OUTLINE},&H90000000,-1,0,0,0,100,100,0,0,1,2,1,2,60,60,80,1
+Style: Hook,{FONT},72,&H00FFFFFF,&H00FFFFFF,{COLOR_OUTLINE},&HA0000000,-1,0,0,0,100,100,0,0,1,4,2,5,60,60,200,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text

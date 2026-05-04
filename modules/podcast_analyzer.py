@@ -182,12 +182,12 @@ Welches Kapitel hat das höchste Viral-Potenzial für TikTok/Reels?
 Kriterien: Kontroverses Thema, emotionale Aussage, überraschendes Statement, starke Meinung.
 
 Antworte NUR mit JSON:
-{{"chapter_index": <1-basierter Index>, "reason": "<1 Satz warum viral>"}}"""
+{{"chapter_index": <1-basierter Index>, "reason": "<1 Satz warum viral>", "hook": "<3-6 Wörter die als Text-Overlay am Anfang erscheinen — schockierend/neugierig machend, z.B. 'Das will niemand zugeben...' oder 'Darüber redet keiner'>"}}"""
 
     try:
         msg = client.messages.create(
             model="claude-haiku-4-5",
-            max_tokens=150,
+            max_tokens=200,
             messages=[{"role": "user", "content": prompt}],
         )
         raw = msg.content[0].text.strip()
@@ -201,11 +201,13 @@ Antworte NUR mit JSON:
         idx = max(0, min(idx, len(chapters) - 1))
         chapter = chapters[idx]
         reason = result.get("reason", "")
+        hook   = result.get("hook", "")
         logger.info(f"[analyzer] Claude wählt Kapitel {idx+1}: '{chapter['title']}' — {reason}")
     except Exception as e:
         logger.warning(f"[analyzer] Claude-Fehler: {e} — zufälliges Kapitel")
         chapter = random.choice(chapters)
         reason = "Zufällig ausgewählt"
+        hook   = ""
 
     # 88s-Fenster aus dem Kapitel schneiden (Anfang bevorzugt)
     c_start = chapter["start_time"]
@@ -224,6 +226,7 @@ Antworte NUR mit JSON:
         "end":           end,
         "chapter_title": chapter["title"],
         "reason":        reason,
+        "hook":          hook,
     }
 
 
@@ -240,6 +243,7 @@ def _pick_middle_segment(video: dict) -> dict:
         "end":           float(end),
         "chapter_title": "",
         "reason":        "Kein Kapitel verfügbar",
+        "hook":          "",
     }
 
 

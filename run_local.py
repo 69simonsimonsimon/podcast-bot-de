@@ -125,6 +125,7 @@ def generate_highlight(channel_keyword: str = None) -> bool:
             channel_name=channel["name"],
             chapter_title=segment["chapter_title"],
             output_path=output_path,
+            hook=segment.get("hook", ""),
         )
 
         # 7. Metadaten + Upload
