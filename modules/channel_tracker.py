@@ -17,48 +17,44 @@ ROOT = Path(__file__).parent.parent
 OUTPUT_DIR = Path(os.environ.get("OUTPUT_DIR", str(ROOT / "output")))
 USED_FILE = OUTPUT_DIR / "used_videos.json"
 
-# ── Große deutsche Podcast-Kanäle ────────────────────────────────────────────
+# ── Echte deutsche Podcast-Kanäle (nur Long-Form Podcast-Formate) ────────────
 CHANNELS = [
-    # Business / Unternehmertum
-    {"name": "Christian Wolf",        "url": "https://www.youtube.com/@ChristianWolf",        "niche": "business"},
+    # Talk / Interview Podcasts
+    {"name": "Hotel Matze",           "url": "https://www.youtube.com/@hotelmatze",            "niche": "talk"},
+    {"name": "Baywatch Berlin",       "url": "https://www.youtube.com/@BaywatchBerlin",        "niche": "talk"},
+    {"name": "Fest & Flauschig",      "url": "https://www.youtube.com/@FestFlauschig",         "niche": "talk"},
+    {"name": "Gemischtes Hack",       "url": "https://www.youtube.com/@GemischtesHack",        "niche": "talk"},
+    {"name": "Jung & Naiv",           "url": "https://www.youtube.com/@JungNaiv",              "niche": "talk"},
+    {"name": "Cui Bono WTF",          "url": "https://www.youtube.com/@CuiBono",               "niche": "talk"},
+
+    # Business / Unternehmertum Podcasts
     {"name": "OMR Podcast",           "url": "https://www.youtube.com/@OMRpodcast",            "niche": "business"},
     {"name": "Startup Insider",       "url": "https://www.youtube.com/@StartupInsider",        "niche": "business"},
-    {"name": "Wirtschafts Woche",     "url": "https://www.youtube.com/@WirtschaftsWoche",      "niche": "business"},
+    {"name": "Doppelgänger Tech Talk","url": "https://www.youtube.com/@Doppelgaenger",         "niche": "business"},
+    {"name": "Bits und so",           "url": "https://www.youtube.com/@bitsundso",             "niche": "business"},
 
-    # Finance / Investieren
-    {"name": "Finanzfluss",           "url": "https://www.youtube.com/@Finanzfluss",           "niche": "finance"},
+    # Finance / Geld Podcasts
     {"name": "Mission Money",         "url": "https://www.youtube.com/@MissionMoney",          "niche": "finance"},
+    {"name": "Geldmacher Podcast",    "url": "https://www.youtube.com/@Geldmacher",            "niche": "finance"},
+    {"name": "Aktien mit Kopf",       "url": "https://www.youtube.com/@AktienMitKopf",         "niche": "finance"},
 
-    # Talk / Entertainment
-    {"name": "Hotel Matze",           "url": "https://www.youtube.com/@hotelmatze",            "niche": "talk"},
-    {"name": "Baywatch Berlin",       "url": "https://www.youtube.com/@BaywatchBerlin",        "niche": "entertainment"},
-    {"name": "Fest & Flauschig",      "url": "https://www.youtube.com/@FestFlauschig",         "niche": "entertainment"},
-    {"name": "Simplicissimus",        "url": "https://www.youtube.com/@simplicissimus",        "niche": "entertainment"},
+    # Gesellschaft / Politik Podcasts
+    {"name": "Lage der Nation",       "url": "https://www.youtube.com/@lagedernation",         "niche": "politics"},
+    {"name": "Die Macherinnen",       "url": "https://www.youtube.com/@DieMacherinnen",        "niche": "politics"},
+    {"name": "Tonspur Wissen",        "url": "https://www.youtube.com/@TonspurWissen",         "niche": "politics"},
 
-    # News / Gesellschaft
-    {"name": "WELT",                  "url": "https://www.youtube.com/@WELT",                  "niche": "politics"},
-    {"name": "n-tv",                  "url": "https://www.youtube.com/@n-tv",                  "niche": "politics"},
-    {"name": "Y-Kollektiv",           "url": "https://www.youtube.com/@Y-Kollektiv",           "niche": "culture"},
-    {"name": "MrWissen2go",           "url": "https://www.youtube.com/@MrWissen2go",           "niche": "culture"},
-
-    # Wissenschaft / Bildung
-    {"name": "Kurzgesagt DE",         "url": "https://www.youtube.com/@KurzgesagtDE",          "niche": "science"},
-    {"name": "maiLab",                "url": "https://www.youtube.com/@maiLab",                "niche": "science"},
-
-    # True Crime / Mystery
-    {"name": "Y-Kollektiv Crime",     "url": "https://www.youtube.com/@Y-Kollektiv",           "niche": "true_crime"},
+    # True Crime Podcasts
+    {"name": "Cold Case Files DE",    "url": "https://www.youtube.com/@ColdCaseFilesDE",       "niche": "true_crime"},
+    {"name": "Mordlust",              "url": "https://www.youtube.com/@MordlustPodcast",       "niche": "true_crime"},
 ]
 
 # Gewichtung nach Viral-Potenzial
 NICHE_WEIGHTS = {
-    "business":     30,
-    "entertainment":25,
+    "talk":         35,
+    "business":     25,
     "finance":      20,
-    "talk":         20,
     "politics":     15,
-    "culture":      15,
-    "true_crime":   20,
-    "science":      10,
+    "true_crime":   25,
 }
 
 

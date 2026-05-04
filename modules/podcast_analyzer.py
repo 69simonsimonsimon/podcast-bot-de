@@ -74,23 +74,31 @@ def get_latest_video(channel_url: str, skip_ids: set = None) -> dict | None:
 
         if vid_id in skip_ids:
             continue
-        # Nur überspringen wenn Dauer bekannt UND unter 10 Minuten
-        if duration > 0 and duration < 600:
+        # Podcasts sind mindestens 20 Minuten lang
+        if duration > 0 and duration < 1200:
             continue
-        # Werbevideos / Sponsored Content überspringen
         title_lower = title.lower()
+        # Werbevideos / Sponsored Content überspringen
         if any(kw in title_lower for kw in [
             "werbung", "sponsored", "anzeige", "partner", "ad ", "#ad",
             "werbespot", "commercial", "promotion", "präsentiert von",
         ]):
             logger.info(f"[analyzer] Skip (Werbung): {title[:60]}")
             continue
+        # Kein News-Content / Shorts / Clips — nur echte Podcast-Folgen
+        if any(kw in title_lower for kw in [
+            "news", "breaking", "nachrichten", "eilmeldung", "shorts",
+            "clip", "zusammenfassung", "ticker", "aktuell", "flash",
+            "trailer", "teaser", "vorschau", "#shorts",
+        ]):
+            logger.info(f"[analyzer] Skip (kein Podcast): {title[:60]}")
+            continue
 
         video_url = f"https://www.youtube.com/watch?v={vid_id}"
         duration, chapters = _get_meta(video_url)
 
         # Nochmals prüfen mit echten Metadaten
-        if duration > 0 and duration < 600:
+        if duration > 0 and duration < 1200:
             logger.debug(f"[analyzer] Skip (zu kurz {duration}s): {title[:50]}")
             continue
 
