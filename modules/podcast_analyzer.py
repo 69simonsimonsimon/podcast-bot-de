@@ -11,6 +11,7 @@ import json
 import logging
 import os
 import subprocess
+import sys
 import tempfile
 import random
 from datetime import timedelta
@@ -37,9 +38,23 @@ HIGHLIGHT_MIN_SEC = 55
 HIGHLIGHT_MAX_SEC = 88   # TikTok-optimiert
 
 
+def _ytdlp_bin() -> str:
+    """Findet yt-dlp — venv-lokal oder System-PATH."""
+    import shutil
+    from pathlib import Path as _P
+    # Gleicher Ordner wie Python-Interpreter (venv/bin/)
+    venv_bin = _P(sys.executable).parent / "yt-dlp"
+    if venv_bin.exists():
+        return str(venv_bin)
+    sys_path = shutil.which("yt-dlp")
+    if sys_path:
+        return sys_path
+    raise FileNotFoundError("yt-dlp nicht gefunden — bitte: pip install yt-dlp")
+
+
 def _run_ytdlp(args: list, timeout: int = 60) -> str:
     result = subprocess.run(
-        ["yt-dlp"] + args,
+        [_ytdlp_bin()] + args,
         capture_output=True, text=True, timeout=timeout,
     )
     return result.stdout.strip()
