@@ -306,7 +306,7 @@ def _group_words(words: list[dict], max_words: int = 4) -> list[list[dict]]:
 
 
 def _build_karaoke_line(group: list[dict]) -> str:
-    """Erstellt Karaoke-Text mit {\k}-Tags für Wort-Highlighting."""
+    r"""Erstellt Karaoke-Text mit {\k}-Tags für Wort-Highlighting."""
     parts = []
     for w in group:
         duration_cs = max(1, int((w["end"] - w["start"]) * 100))
