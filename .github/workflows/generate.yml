@@ -2,10 +2,7 @@ name: Generate Podcast Highlights (DE)
 
 on:
   schedule:
-    - cron: '0 8 * * *'    # 08:00 UTC = 10:00 DE
-    - cron: '0 12 * * *'   # 12:00 UTC = 14:00 DE
-    - cron: '0 17 * * *'   # 17:00 UTC = 19:00 DE
-    - cron: '0 21 * * *'   # 21:00 UTC = 23:00 DE
+    - cron: '0 20 * * *'   # 20:00 UTC = 22:00 CEST — 4 Clips auf einmal
   workflow_dispatch:
     inputs:
       channel:
@@ -37,4 +34,4 @@ jobs:
           BUNNY_STORAGE_HOSTNAME: ${{ secrets.BUNNY_STORAGE_HOSTNAME }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python3 run_local.py "${{ github.event.inputs.channel || '' }}" 2 1
+        run: python3 run_local.py "${{ github.event.inputs.channel || '' }}" 4
