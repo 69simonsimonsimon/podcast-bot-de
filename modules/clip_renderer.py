@@ -42,7 +42,13 @@ FONT_SIZE      = 68
 
 
 def _get_cookies_file() -> str | None:
-    """Schreibt YouTube-Cookies aus Env-Variable in Temp-Datei. Gibt Pfad zurück oder None."""
+    """Gibt Pfad zur YouTube-Cookies-Datei zurück oder None.
+    Prüft zuerst YOUTUBE_COOKIES_FILE (direkter Pfad), dann YOUTUBE_COOKIES (Inhalt)."""
+    # 1. Direkter Dateipfad (bevorzugt)
+    cookies_file = os.environ.get("YOUTUBE_COOKIES_FILE", "").strip()
+    if cookies_file and Path(cookies_file).exists():
+        return cookies_file
+    # 2. Cookie-Inhalt als Env-Variable (Legacy)
     cookies = os.environ.get("YOUTUBE_COOKIES", "").strip()
     if not cookies:
         return None

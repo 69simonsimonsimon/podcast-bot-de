@@ -23,7 +23,13 @@ logger = logging.getLogger("podcastbot")
 
 
 def _cookies_args() -> list:
-    """Gibt yt-dlp Cookie-Argumente zurück falls YOUTUBE_COOKIES gesetzt."""
+    """Gibt yt-dlp Cookie-Argumente zurück falls YOUTUBE_COOKIES_FILE oder YOUTUBE_COOKIES gesetzt."""
+    from pathlib import Path as _P
+    # 1. Direkter Dateipfad (bevorzugt)
+    cookies_file = os.environ.get("YOUTUBE_COOKIES_FILE", "").strip()
+    if cookies_file and _P(cookies_file).exists():
+        return ["--cookies", cookies_file]
+    # 2. Cookie-Inhalt als Env-Variable (Legacy)
     cookies = os.environ.get("YOUTUBE_COOKIES", "").strip()
     if not cookies:
         return []
