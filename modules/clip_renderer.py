@@ -8,13 +8,26 @@ Clip Renderer — Podcast Bot DE
 
 import logging
 import os
+import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
 import openai
 
 logger = logging.getLogger("podcastbot")
+
+
+def _ytdlp_bin() -> str:
+    """Findet yt-dlp im venv oder System-PATH."""
+    venv_bin = Path(sys.executable).parent / "yt-dlp"
+    if venv_bin.exists():
+        return str(venv_bin)
+    found = shutil.which("yt-dlp")
+    if found:
+        return found
+    raise FileNotFoundError("yt-dlp nicht gefunden — bitte: pip install yt-dlp")
 
 # ── Render-Konfiguration ──────────────────────────────────────────────────────
 WIDTH  = 1080
@@ -76,7 +89,7 @@ def download_segment(video_url: str, start: float, end: float,
             f.unlink(missing_ok=True)
 
         cmd = [
-            "yt-dlp",
+            _ytdlp_bin(),
             "--download-sections", f"*{start_str}-{end_str}",
             "--force-keyframes-at-cuts",
             "-f", strategy["format"],
