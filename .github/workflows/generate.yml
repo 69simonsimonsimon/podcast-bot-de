@@ -1,14 +1,7 @@
 name: Generate Podcast Highlights (DE)
 
 on:
-  schedule:
-    - cron: '0 20 * * *'   # 20:00 UTC = 22:00 CEST — 4 Clips auf einmal
-  workflow_dispatch:
-    inputs:
-      channel:
-        description: 'Kanal-Stichwort (leer = zufällig)'
-        required: false
-        default: ''
+  workflow_dispatch:   # Schedule deaktiviert
 
 jobs:
   generate:
